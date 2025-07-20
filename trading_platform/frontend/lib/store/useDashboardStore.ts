@@ -1,4 +1,5 @@
 import create from 'zustand';
+import toast from 'react-hot-toast';
 
 // --- Types and Interfaces ---
 interface Client {
@@ -23,10 +24,12 @@ interface DashboardState {
   clients: Client[];
   quantities: Quantities;
   tradeConfig: TradeConfig;
+  realtimePL: { [clientId: string]: number }; // New state property
   fetchClients: () => Promise<void>;
   setQuantity: (clientId: string, quantity: number) => void;
   setTradeConfig: (config: Partial<TradeConfig>) => void;
   executeAllOrders: () => Promise<void>;
+  updatePL: (clientId: string, pnl: number) => void; // New action
 }
 
 // --- Store Definition ---
@@ -41,6 +44,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     orderType: 'MARKET',
     buyOrSell: 'BUY',
   },
+  realtimePL: {}, // Initialize new state property
 
   // --- State Actions ---
   fetchClients: async () => {
@@ -51,7 +55,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       set({ clients });
     } catch (error) {
       console.error("Error fetching clients:", error);
-      // In a real app, you'd set an error state here
+      toast.error(`Failed to fetch clients: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 
@@ -84,7 +88,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       }));
 
     if (client_orders.length === 0) {
-      alert("No orders to execute. Please set quantities for clients.");
+      toast.info("No orders to execute. Please set quantities for clients.");
       return;
     }
 
@@ -97,27 +101,38 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       client_orders,
     };
 
-    try {
-      const response = await fetch('/api/v1/orders/execute-all', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
+    const promise = fetch('/api/v1/orders/execute-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(async (response) => {
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'Failed to execute orders');
       }
+      return response.json();
+    });
 
-      const result = await response.json();
-      alert('Orders executed successfully!');
-      console.log('Execution Result:', result);
-      // Reset quantities after successful execution
-      set({ quantities: {} });
+    toast.promise(promise, {
+      loading: 'Executing orders...',
+      success: (result) => {
+        set({ quantities: {} }); // Reset quantities after successful execution
+        console.log('Execution Result:', result);
+        return 'Orders executed successfully!';
+      },
+      error: (err) => {
+        console.error("Error executing orders:", err);
+        return `Execution failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
+      },
+    });
+  },
 
-    } catch (error) {
-      console.error("Error executing orders:", error);
-      alert(`Execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+  updatePL: (clientId, pnl) => {
+    set((state) => ({
+      realtimePL: {
+        ...state.realtimePL,
+        [clientId]: pnl,
+      },
+    }));
   },
 }));

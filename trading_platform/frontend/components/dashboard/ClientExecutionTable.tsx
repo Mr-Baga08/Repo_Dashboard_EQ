@@ -2,14 +2,22 @@
 
 import { useEffect } from 'react';
 import { useDashboardStore } from '@/lib/store/useDashboardStore';
+import useRealtimePL from '@/lib/hooks/useRealtimePL'; // Import the new hook
 
 export default function ClientExecutionTable() {
-  const { clients, quantities, fetchClients, setQuantity } = useDashboardStore();
+  const { clients, quantities, realtimePL, fetchClients, setQuantity, updatePL } = useDashboardStore();
 
   useEffect(() => {
     // Fetch clients when the component mounts
     fetchClients();
   }, [fetchClients]);
+
+  // Integrate the real-time P/L hook
+  useRealtimePL({
+    onMessage: (data) => {
+      updatePL(data.clientId, data.pnl);
+    },
+  });
 
   return (
     <div className="w-full overflow-x-auto">
@@ -25,24 +33,34 @@ export default function ClientExecutionTable() {
           </tr>
         </thead>
         <tbody className="divide-y divide-border bg-card">
-          {clients.map((client) => (
-            <tr key={client.id} className="hover:bg-slate-50/50">
-              <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:pl-6">{client.name}</td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">{client.client_id}</td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">$0.00</td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">$0.00</td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm">
-                <input
-                  type="number"
-                  value={quantities[client.id] || ''}
-                  onChange={(e) => setQuantity(client.id, parseInt(e.target.value, 10) || 0)}
-                  className="h-9 w-24 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="0"
-                />
-              </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">$0.00</td>
-            </tr>
-          ))}
+          {clients.map((client) => {
+            const pnlValue = realtimePL[client.client_id]; // Use client.client_id as key
+            const pnlColorClass = pnlValue !== undefined
+              ? (pnlValue >= 0 ? 'text-green-500' : 'text-red-500')
+              : 'text-muted-foreground';
+            const formattedPnl = pnlValue !== undefined
+              ? `${pnlValue.toFixed(2)}`
+              : '---';
+
+            return (
+              <tr key={client.id} className="hover:bg-slate-50/50">
+                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:pl-6">{client.name}</td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">{client.client_id}</td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">$0.00</td>
+                <td className={`whitespace-nowrap px-3 py-4 text-sm ${pnlColorClass}`}>{formattedPnl}</td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm">
+                  <input
+                    type="number"
+                    value={quantities[client.id] || ''}
+                    onChange={(e) => setQuantity(client.id, parseInt(e.target.value, 10) || 0)}
+                    className="h-9 w-24 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="0"
+                  />
+                </td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">$0.00</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
