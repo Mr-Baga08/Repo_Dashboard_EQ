@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { Header } from '@/components/layout/Header'; // Assuming Header component path
+import Header from '@/components/layout/Header'; // Assuming Header component path
 import { Card } from '@/components/ui/Card';     // Assuming Card component path
 import ActiveTradesTable from '@/components/client/ActiveTradesTable';
 
@@ -85,7 +85,7 @@ export default function ClientDetailPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header />
+      <Header title={''} />
       <main className="flex-1 p-6">
         <h1 className="text-3xl font-bold mb-6">Client: {client.name} ({client.client_id})</h1>
 

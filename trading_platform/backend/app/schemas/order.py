@@ -19,3 +19,8 @@ class OrderResponse(BaseModel):
     client_id: UUID
     status: str
     message: str
+
+class TokenExitPayload(BaseModel):
+    token_symbol: str
+    token_exchange: str
+    clients_to_exit: List[UUID]

@@ -1,8 +1,9 @@
 'use client';
 
+import React from 'react';
 import { useEffect } from 'react';
-import { useDashboardStore } from '@/lib/store/useDashboardStore';
-import useRealtimePL from '@/lib/hooks/useRealtimePL'; // Import the new hook
+import { useDashboardStore } from '../../lib/store/useDashboardStore';
+import useRealtimePL from '../../lib/hooks/useRealtimePL'; // Corrected import path
 
 export default function ClientExecutionTable() {
   const { clients, quantities, realtimePL, fetchClients, setQuantity, updatePL } = useDashboardStore();

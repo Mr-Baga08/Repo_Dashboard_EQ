@@ -1,26 +1,21 @@
-import asyncio
-import random
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from app.websockets.connection_manager import connection_manager
 
 router = APIRouter()
 
 @router.websocket("/ws/pl")
 async def websocket_pl_endpoint(websocket: WebSocket):
     """
-    WebSocket endpoint to stream simulated real-time Profit/Loss data.
+    WebSocket endpoint for real-time P/L data. Manages client connections.
     """
-    await websocket.accept()
+    await connection_manager.connect(websocket)
     try:
         while True:
-            # In a real app, this data would come from a Redis stream or a broker's feed.
-            # Here, we simulate it for demonstration.
-            mock_data = {
-                "clientId": f"user_{random.randint(1, 10)}",
-                "pnl": round(random.uniform(-500, 500), 2)
-            }
-            await websocket.send_json(mock_data)
-            await asyncio.sleep(2)  # Simulate a 2-second interval for updates
+            # Keep the connection alive. Frontend sends no messages to this endpoint.
+            await websocket.receive_text()
     except WebSocketDisconnect:
         print("Client disconnected from P/L WebSocket.")
     except Exception as e:
         print(f"An error occurred in the P/L WebSocket: {e}")
+    finally:
+        connection_manager.disconnect(websocket)

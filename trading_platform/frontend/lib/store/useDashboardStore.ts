@@ -1,5 +1,4 @@
-import create from 'zustand';
-import toast from 'react-hot-toast';
+import { create } from 'zustand';
 
 // --- Types and Interfaces ---
 interface Client {
@@ -20,16 +19,21 @@ interface Quantities {
   [clientId: string]: number;
 }
 
+// Interface for the real-time P/L data
+interface RealtimePL {
+  [clientId: string]: number;
+}
+
 interface DashboardState {
   clients: Client[];
   quantities: Quantities;
   tradeConfig: TradeConfig;
-  realtimePL: { [clientId: string]: number }; // New state property
+  realtimePL: RealtimePL; // Added for real-time P/L
   fetchClients: () => Promise<void>;
   setQuantity: (clientId: string, quantity: number) => void;
   setTradeConfig: (config: Partial<TradeConfig>) => void;
   executeAllOrders: () => Promise<void>;
-  updatePL: (clientId: string, pnl: number) => void; // New action
+  updatePL: (clientId: string, pnl: number) => void; // Added action for P/L updates
 }
 
 // --- Store Definition ---
@@ -44,18 +48,20 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     orderType: 'MARKET',
     buyOrSell: 'BUY',
   },
-  realtimePL: {}, // Initialize new state property
+  realtimePL: {}, // Initial state for real-time P/L
 
   // --- State Actions ---
   fetchClients: async () => {
     try {
-      const response = await fetch('/api/v1/clients');
+      // Note: The API path should not include `/v1` if using FastAPI's default router setup.
+      // Adjust if your backend router has a prefix.
+      const response = await fetch('/api/clients');
       if (!response.ok) throw new Error('Failed to fetch clients');
       const clients = await response.json();
       set({ clients });
     } catch (error) {
       console.error("Error fetching clients:", error);
-      toast.error(`Failed to fetch clients: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // In a real app, you'd set an error state here
     }
   },
 
@@ -77,6 +83,15 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     }));
   },
 
+  updatePL: (clientId, pnl) => {
+    set((state) => ({
+      realtimePL: {
+        ...state.realtimePL,
+        [clientId]: pnl,
+      },
+    }));
+  },
+
   executeAllOrders: async () => {
     const { tradeConfig, quantities } = get();
 
@@ -88,7 +103,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       }));
 
     if (client_orders.length === 0) {
-      toast.info("No orders to execute. Please set quantities for clients.");
+      // Using console.warn instead of alert for better development experience
+      console.warn("No orders to execute. Please set quantities for clients.");
       return;
     }
 
@@ -101,38 +117,26 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       client_orders,
     };
 
-    const promise = fetch('/api/v1/orders/execute-all', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    }).then(async (response) => {
+    try {
+      const response = await fetch('/api/orders/execute-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'Failed to execute orders');
       }
-      return response.json();
-    });
 
-    toast.promise(promise, {
-      loading: 'Executing orders...',
-      success: (result) => {
-        set({ quantities: {} }); // Reset quantities after successful execution
-        console.log('Execution Result:', result);
-        return 'Orders executed successfully!';
-      },
-      error: (err) => {
-        console.error("Error executing orders:", err);
-        return `Execution failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
-      },
-    });
-  },
+      const result = await response.json();
+      console.log('Execution Result:', result);
+      // Reset quantities after successful execution
+      set({ quantities: {} });
 
-  updatePL: (clientId, pnl) => {
-    set((state) => ({
-      realtimePL: {
-        ...state.realtimePL,
-        [clientId]: pnl,
-      },
-    }));
+    } catch (error) {
+      console.error("Error executing orders:", error);
+      // Handle alerts or notifications in the UI component instead of the store
+    }
   },
 }));

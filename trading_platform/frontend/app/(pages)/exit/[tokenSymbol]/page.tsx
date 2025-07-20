@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { Header } from '@/components/layout/Header';
+import  Header  from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
@@ -70,7 +70,7 @@ export default function TokenExitPage() {
 
   const handleExitAllSelected = async () => {
     if (selectedClients.length === 0) {
-      toast.info('Please select at least one client to exit.');
+      toast('Please select at least one client to exit.');
       return;
     }
 
@@ -117,7 +117,7 @@ export default function TokenExitPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header />
+      <Header title={''} />
       <main className="flex-1 p-6">
         <h1 className="text-3xl font-bold mb-6">Exiting All Positions for {tokenSymbol.toUpperCase()}</h1>
 

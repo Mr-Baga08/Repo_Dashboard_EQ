@@ -51,7 +51,7 @@ export default function ActiveTradesTable({ activeTrades, clientId }: ActiveTrad
 
     toast.promise(exitPromise, {
       loading: `Exiting ${trade.symbol}...`,
-      success: (message) => message,
+      success: (message) => message as string,
       error: (error) => error,
     });
   };
